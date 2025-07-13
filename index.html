@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>لعبة الأسئلة - Quiz Game</title>
+  <style>
+    body {
+      margin: 0; padding: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(45deg, #4facfe, #00f2fe, #4facfe, #00f2fe);
+      background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Blue_question_mark.svg/2048px-Blue_question_mark.svg.png');
+      background-repeat: repeat;
+      background-size: 60px;
+      color: #fff;
+      text-align: center;
+      direction: rtl;
+    }
+    .container {
+      margin-top: 100px;
+    }
+    button {
+      width: 200px;
+      height: 50px;
+      margin: 15px auto;
+      font-size: 18px;
+      background-color: #007bff;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      cursor: pointer;
+      display: block;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 15%;
+      left: 50%;
+      transform: translate(-50%, 0);
+      background-color: rgba(0, 0, 50, 0.95);
+      padding: 30px;
+      border-radius: 12px;
+      width: 360px;
+      max-width: 90%;
+      box-sizing: border-box;
+      z-index: 10;
+    }
+    input[type="text"], input[type="file"] {
+      width: 90%;
+      padding: 8px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: none;
+      font-size: 16px;
+    }
+    #coinsText {
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .footer {
+      position: fixed;
+      bottom: 10px;
+      width: 100%;
+      color: white;
+      font-size: 14px;
+      text-align: center;
+      user-select: none;
+    }
+  </style>
+  
+  <!-- Google AdSense Example Code (استبدله بكودك الحقيقي) -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <script>
+    (adsbygoogle = window.adsbygoogle || []).push({
+      google_ad_client: "ca-pub-xxxxxxxxxxxxxxxx",
+      enable_page_level_ads: true
+    });
+  </script>
+</head>
+<body>
+
+  <div class="container">
+    <h1 id="title">لعبة الأسئلة</h1>
+    <button onclick="startGame()">المراحل</button>
+    <button onclick="openSettings()">الإعدادات</button>
+    <button onclick="donate()">التبرع</button>
+    <button onclick="openStore()">المتجر</button>
+    <button onclick="exitGame()">الخروج</button>
+  </div>
+
+  <div id="settings" class="modal">
+    <h2>الإعدادات</h2>
+    <label>
+      <input type="checkbox" id="langSwitch" onchange="toggleLanguage()"> English
+    </label>
+    <br/>
+    <label>
+      اختر صورة خلفية:
+      <input type="file" accept="image/*" onchange="changeBackground(event)" />
+    </label>
+    <br/>
+    <button onclick="closeSettings()">إغلاق</button>
+  </div>
+
+  <div id="store" class="modal">
+    <h2>المتجر</h2>
+    <p>شراء عملات لتخطي الأسئلة: 200 عملة = 3 دولار</p>
+    <p>شراء مانع الإعلانات: 10 دولار</p>
+    <p>الدفع عبر PayPal: <strong>sysym2011@gmail.com</strong></p>
+    <button onclick="buyCoins()">شراء 200 عملة</button>
+    <button onclick="buyAdBlock()">شراء مانع الإعلانات</button>
+    <button onclick="closeStore()">إغلاق</button>
+  </div>
+
+  <div id="game" class="modal" style="direction: rtl;">
+    <h2>السؤال</h2>
+    <p id="questionText" style="min-height: 80px; font-size: 20px;"></p>
+    <input id="answerInput" type="text" placeholder="اكتب إجابتك هنا" autocomplete="off"/>
+    <button onclick="submitAnswer()">تحقق</button>
+    <button onclick="skipQuestion()">تخطي (200 عملة)</button>
+    <p id="coinsText">العملات: 0</p>
+  </div>
+
+  <p class="footer">game developed by yaseenmod2</p>
+
+<script>
+  // ===== البيانات =====
+
+  // 100 سؤال عربي وانجليزي مع إجابات
+  const questions = [
+    {ar:"ما عاصمة مصر؟", en:"What is the capital of Egypt?", answer:"القاهرة"},
+    {ar:"ما هو أكبر كوكب في المجموعة الشمسية؟", en:"What is the largest planet in the Solar System?", answer:"المشتري"},
+    {ar:"من هو مخترع المصباح الكهربائي؟", en:"Who invented the electric bulb?", answer:"توماس إديسون"},
+    {ar:"كم عدد الألوان في قوس قزح؟", en:"How many colors are in the rainbow?", answer:"سبعة"},
+    {ar:"ما هو أسرع حيوان بري؟", en:"What is the fastest land animal?", answer:"الفهد"},
+    {ar:"ما هي لغة البرمجة المستخدمة لإنشاء صفحات الويب؟", en:"Which programming language is used to create web pages?", answer:"جافاسكريبت"},
+    {ar:"ما هو العنصر الكيميائي الذي رمزه Fe؟", en:"What is the chemical element with symbol Fe?", answer:"الحديد"},
+    {ar:"من هو مؤلف رواية '1984'؟", en:"Who wrote the novel '1984'?", answer:"جورج أورويل"},
+    {ar:"كم عدد القارات على سطح الأرض؟", en:"How many continents are on Earth?", answer:"سبعة"},
+    {ar:"ما هو الحيوان الذي يرمز للحكمة في الثقافة اليونانية؟", en:"Which animal symbolizes wisdom in Greek culture?", answer:"البومة"},
+    {ar:"في أي عام نزل أول إنسان على القمر؟", en:"In which year did the first man land on the moon?", answer:"1969"},
+    {ar:"ما هو اسم أطول نهر في العالم؟", en:"What is the longest river in the world?", answer:"النيل"},
+    {ar:"ما هو اسم أكبر محيط في العالم؟", en:"What is the largest ocean in the world?", answer:"المحيط الهادئ"},
+    {ar:"من هو مؤسس شركة مايكروسوفت؟", en:"Who founded Microsoft?", answer:"بيل غيتس"},
+    {ar:"ما هي عاصمة اليابان؟", en:"What is the capital of Japan?", answer:"طوكيو"},
+    {ar:"ما هي أصغر وحدة في الكائن الحي؟", en:"What is the smallest unit in a living organism?", answer:"الخلية"},
+    {ar:"ما هو اسم أقرب نجم إلى الأرض؟", en:"What is the nearest star to Earth?", answer:"الشمس"},
+    {ar:"من هو الفنان الذي رسم لوحة الموناليزا؟", en:"Who painted the Mona Lisa?", answer:"ليوناردو دا فينشي"},
+    {ar:"ما هو الغاز الذي نتنفسه؟", en:"What gas do we breathe?", answer:"الأكسجين"},
+    {ar:"ما هو اسم الجهاز الذي نستخدمه لقياس درجة الحرارة؟", en:"What device do we use to measure temperature?", answer:"التيرمومتر"},
+    {ar:"من هو مؤلف كتاب 'الكوميديا الإلهية'؟", en:"Who wrote 'The Divine Comedy'?", answer:"دانتي أليغييري"},
+    {ar:"كم عدد الأسنان لدى الإنسان البالغ؟", en:"How many teeth does an adult human have?", answer:"32"},
+    {ar:"ما هو اسم عاصمة فرنسا؟", en:"What is the capital of France?", answer:"باريس"},
+    {ar:"ما هو أكبر حيوان على وجه الأرض؟", en:"What is the largest animal on Earth?", answer:"الحوت الأزرق"},
+    {ar:"ما هو العنصر الأكثر وفرة في الكون؟", en:"What is the most abundant element in the universe?", answer:"الهيدروجين"},
+    {ar:"ما هو اسم أصغر كوكب في النظام الشمسي؟", en:"What is the smallest planet in the solar system?", answer:"عطارد"},
+    {ar:"من هو مكتشف قانون الجاذبية؟", en:"Who discovered the law of gravity?", answer:"إسحاق نيوتن"},
+    {ar:"ما هي عاصمة كندا؟", en:"What is the capital of Canada?", answer:"أوتاوا"},
+    {ar:"ما هو الجهاز الذي يستخدم لقياس ضغط الدم؟", en:"What device is used to measure blood pressure?", answer:"جهاز قياس ضغط الدم"},
+    {ar:"ما هو اسم أشهر معبد في الهند؟", en:"What is the name of the famous temple in India?", answer:"تاج محل"},
+    {ar:"من هو مخترع الهاتف؟", en:"Who invented the telephone?", answer:"ألكسندر غراهام بيل"},
+    {ar:"ما هي عاصمة إيطاليا؟", en:"What is the capital of Italy?", answer:"روما"},
+    {ar:"ما اسم الكوكب الأحمر؟", en:"What is the Red Planet?", answer:"المريخ"},
+    {ar:"ما هو اسم أطول جبل في العالم؟", en:"What is the tallest mountain in the world?", answer:"إيفرست"},
+    {ar:"ما هو اسم أسرع طائر؟", en:"What is the fastest bird?", answer:"الصقر"},
+    {ar:"كم عدد حروف اللغة العربية؟", en:"How many letters are in the Arabic alphabet?", answer:"28"},
+    {ar:"ما اسم أكبر بحيرة في العالم؟", en:"What is the largest lake in the world?", answer:"بحيرة كاسبيان"},
+    {ar:"من هو مؤلف مسرحية هاملت؟", en:"Who wrote the play Hamlet?", answer:"ويليام شكسبير"},
+    {ar:"ما هو اسم القارة التي تقع فيها مصر؟", en:"What continent is Egypt located in?", answer:"أفريقيا"},
+    {ar:"ما اسم أسرع حيوان بحري؟", en:"What is the fastest sea animal?", answer:"سمكة الشراع"},
+    {ar:"ما اسم أشهر لوحة للفنان فان جوخ؟", en:"What is the most famous painting by Van Gogh?", answer:"النجوم المتلألئة"},
+    {ar:"ما هي عاصمة السعودية؟", en:"What is the capital of Saudi Arabia?", answer:"الرياض"},
+    {ar:"من هو مخترع الطائرة؟", en:"Who invented the airplane?", answer:"الأخوين رايت"},
+    {ar:"ما هو اسم أكبر صحراء في العالم؟", en:"What is the largest desert in the world?", answer:"الصحراء الكبرى"},
+    {ar:"ما اسم أول رائد فضاء؟", en:"What is the name of the first astronaut?", answer:"يوري جاجارين"},
+    {ar:"ما هو اسم أكبر مدينة في العالم؟", en:"What is the largest city in the world?", answer:"طوكيو"},
+    {ar:"ما هو اسم أطول نهر في أفريقيا؟", en:"What is the longest river in Africa?", answer:"النيل"},
+    {ar:"ما هو اسم أسرع سيارة في العالم؟", en:"What is the fastest car in the world?", answer:"بوجاتي تشيرون"},
+    {ar:"ما اسم أكبر دولة في العالم؟", en:"What is the largest country in the world?", answer:"روسيا"},
+    {ar:"من هو مؤلف رواية الحرب والسلام؟", en:"Who wrote the novel War and Peace?", answer:"ليو تولستوي"},
+    {ar:"ما هو اسم أكبر كوكب؟", en:"What is the biggest planet?", answer:"المشتري"},
+    {ar:"ما اسم الدولة التي يوجد بها برج إيفل؟", en:"Which country has the Eiffel Tower?", answer:"فرنسا"},
+    {ar:"كم عدد أضلاع المثلث؟", en:"How many sides does a triangle have?", answer:"3"},
+    {ar:"ما هو اسم أسرع قطار في العالم؟", en:"What is the fastest train in the world?", answer:"شنكانسن"},
+    {ar:"ما هو اسم أكبر قارة؟", en:"What is the largest continent?", answer:"آسيا"},
+    {ar:"من هو مكتشف أمريكا؟", en:"Who discovered America?", answer:"كريستوفر كولومبوس"},
+    {ar:"ما اسم أعلى شلال في العالم؟", en:"What is the highest waterfall in the world?", answer:"شلالات أنجل"},
+    {ar:"ما هو اسم أول رئيس للولايات المتحدة؟", en:"Who was the first US president?", answer:"جورج واشنطن"},
+    {ar:"ما هو اسم أصغر دولة في العالم؟", en:"What is the smallest country in the world?", answer:"الفاتيكان"},
+    {ar:"ما هو اسم أكبر حيوان بري؟", en:"What is the largest land animal?", answer:"الفيل"},
+    {ar:"ما هو اسم أكبر محيط؟", en:"What is the largest ocean?", answer:"المحيط الهادئ"},
+    {ar:"ما هو اسم عاصمة العراق؟", en:"What is the capital of Iraq?", answer:"بغداد"},
+    {ar:"ما اسم أقرب كوكب للشمس؟", en:"What is the closest planet to the sun?", answer:"عطارد"},
+    {ar:"ما اسم الكوكب الذي نعيش عليه؟", en:"What planet do we live on?", answer:"الأرض"},
+    {ar:"ما هو اسم الحيوان الوطني لمصر؟", en:"What is Egypt's national animal?", answer:"الصقر"},
+    {ar:"كم عدد أصابع اليد؟", en:"How many fingers are on a hand?", answer:"خمسة"},
+    {ar:"ما هو اسم أشهر قلعة في فرنسا؟", en:"What is the most famous castle in France?", answer:"قلعة فرساي"},
+    {ar:"ما هو اسم أطول جسر في العالم؟", en:"What is the longest bridge in the world?", answer:"جسر دانيانغ-كونشان"},
+    {ar:"من هو مخترع الكهرباء؟", en:"Who invented electricity?", answer:"بنيامين فرانكلين"},
+    {ar:"ما اسم البحر بين السعودية ومصر؟", en:"What is the sea between Saudi Arabia and Egypt?", answer:"البحر الأحمر"},
+    {ar:"ما اسم أشهر مدينة في إيطاليا؟", en:"What is the most famous city in Italy?", answer:"روما"},
+    {ar:"ما اسم أسرع حيوان بري في أفريقيا؟", en:"What is the fastest land animal in Africa?", answer:"الفهد"},
+    {ar:"ما اسم اللغة التي يتحدث بها أهل البرازيل؟", en:"What language do people speak in Brazil?", answer:"البرتغالية"},
+    {ar:"ما اسم أكبر دولة عربية؟", en:"What is the largest Arab country?", answer:"الجزائر"},
+    {ar:"ما اسم العاصمة التركية؟", en:"What is the capital of Turkey?", answer:"أنقرة"},
+    {ar:"كم عدد الأيام في الأسبوع؟", en:"How many days are in a week?", answer:"سبعة"},
+    {ar:"ما اسم أقوى معدن في الطبيعة؟", en:"What is the strongest metal in nature?", answer:"التيتانيوم"},
+    {ar:"ما اسم المدينة التي بها تمثال الحرية؟", en:"Which city has the Statue of Liberty?", answer:"نيويورك"},
+    {ar:"ما اسم أول رجل على سطح القمر؟", en:"Who was the first man on the moon?", answer:"نيل أرمسترونغ"}
+  ];
+
+  // 50 لغز عربي وإنجليزي مع إجابات
+  const riddles = [
+    {ar:"شيء له أسنان ولا يعض، ما هو؟", en:"It has teeth but doesn't bite?", answer:"المشط"},
+    {ar:"يمشي بلا أرجل ويبكي بلا عيون، ما هو؟", en:"Walks without legs, cries without eyes?", answer:"السحاب"},
+    {ar:"له عين ولا يرى، ما هو؟", en:"Has an eye but cannot see?", answer:"الإبرة"},
+    {ar:"شيء تذبحه وتبكي عليه؟", en:"You slaughter it and cry for it?", answer:"البصل"},
+    {ar:"له رقبة بلا رأس، ما هو؟", en:"Has a neck but no head?", answer:"الزجاجة"},
+    {ar:"شيء كلما أخذت منه كبر؟", en:"What gets bigger the more you take away?", answer:"الحفرة"},
+    {ar:"أين البحر الذي لا ماء فيه؟", en:"A sea without water?", answer:"على الخريطة"},
+    {ar:"ترى كل شيء بلا عيون؟", en:"Sees everything but has no eyes?", answer:"المرآة"},
+    {ar:"شيء إذا وضعته في الثلاجة يموت، ما هو؟", en:"What dies if you put it in the fridge?", answer:"البكتيريا"},
+    {ar:"له أوراق ولكنه ليس شجرة، ما هو؟", en:"Has leaves but isn't a tree?", answer:"الكتاب"},
+    {ar:"شيء يكسو الناس وهو عارٍ، ما هو؟", en:"Clothes people while being naked?", answer:"الظل"},
+    {ar:"ما هو الشيء الذي يكتب ولا يقرأ؟", en:"What writes but doesn't read?", answer:"القلم"},
+    {ar:"شيء تأكله دون أن تبلغه، ما هو؟", en:"What do you eat without swallowing?", answer:"الطبق"},
+    {ar:"شيء له رأس ولا عين له؟", en:"Has a head but no eye?", answer:"الدبوس"},
+    {ar:"شيء كلما زاد نقص، ما هو؟", en:"The more you take away, the bigger it gets?", answer:"الحفرة"},
+    {ar:"أين تجد مدينة بلا ناس؟", en:"Where can you find a city with no people?", answer:"على الخريطة"},
+    {ar:"ما هو الشيء الذي يملك يدين ولا يستطيع التصفيق؟", en:"What has two hands but can’t clap?", answer:"الساعة"},
+    {ar:"شيء لا يمكنك كسره حتى ولو ألقيته على الأرض بقوة، ما هو؟", en:"What can’t be broken even if dropped on the ground?", answer:"الوعد"},
+    {ar:"ما هو الشيء الذي كلما أخذت منه زاد؟", en:"What gets bigger the more you take away?", answer:"الحفرة"},
+    {ar:"شيء يبدأ بالليل وينتهي بالليل ولا يتحرك؟", en:"Starts at night, ends at night, and doesn’t move?", answer:"النجوم"},
+    {ar:"ما هو الشيء الذي يطير بلا جناح ويبكي بلا عين؟", en:"What flies without wings and cries without eyes?", answer:"السحاب"},
+    {ar:"ما هو الشيء الذي يوجد في كل مكان ولكن لا يمكنك رؤيته؟", en:"What is everywhere but cannot be seen?", answer:"الهواء"},
+    {ar:"ما هو الشيء الذي لا يبتل حتى ولو دخل الماء؟", en:"What never gets wet even when it enters water?", answer:"الظل"},
+    {ar:"ما هو الشيء الذي يأكل ولا يشبع؟", en:"What eats but never gets full?", answer:"النار"},
+    {ar:"شيء له أذنان ولا يسمع، ما هو؟", en:"What has two ears but cannot hear?", answer:"الذرة"},
+    {ar:"ما هو الشيء الذي يذهب ويأتي ولا يترك أثراً؟", en:"What comes and goes but leaves no trace?", answer:"الزمن"},
+    {ar:"ما هو الشيء الذي يمتلك مفتاح ولا يفتح باب؟", en:"What has a key but doesn’t open a door?", answer:"البيانو"},
+    {ar:"شيء نراه في النهار ولا نراه في الليل، ما هو؟", en:"What do we see during the day but not at night?", answer:"الشمس"},
+    {ar:"ما هو الشيء الذي له قلب ولا ينبض؟", en:"What has a heart but doesn’t beat?", answer:"الخرشوف"},
+    {ar:"ما هو الشيء الذي يزداد كلما أخذت منه؟", en:"What increases the more you take away?", answer:"الحفرة"},
+    {ar:"شيء يمكنك كسره دون لمسه، ما هو؟", en:"What can you break without touching it?", answer:"الوعد"},
+    {ar:"ما هو الشيء الذي يمتلك أرجل ولا يستطيع المشي؟", en:"What has legs but cannot walk?", answer:"الكرسي"},
+    {ar:"شيء يوجد في كل مكان ولا تستطيع رؤيته، ما هو؟", en:"What is everywhere but you cannot see it?", answer:"الهواء"},
+    {ar:"ما هو الشيء الذي له أسنان ولا يعض؟", en:"What has teeth but doesn’t bite?", answer:"المشط"},
+  ];
+// ===== متغيرات اللعبة =====
+let currentLang = 'ar'; // 'ar' أو 'en'
+let currentQuestionIndex = 0;
+let currentRiddleIndex = 0;
+let coins = 0;
+let mistakesInRow = 0;
+let showedMistakeMessage = false;
+let inRiddleMode = false;
+let adBlockPurchased = false;
+
+// عناصر HTML
+const questionText = document.getElementById('questionText');
+const answerInput = document.getElementById('answerInput');
+const coinsText = document.getElementById('coinsText');
+const title = document.getElementById('title');
+
+function updateCoinsText() {
+  coinsText.textContent = currentLang === 'ar' ? `العملات: ${coins}` : `Coins: ${coins}`;
+}
+
+function updateTitle() {
+  title.textContent = currentLang === 'ar' ? 'لعبة الأسئلة' : 'Quiz Game';
+}
+
+// عرض النافذة
+function showModal(id) {
+  document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+}
+
+// إخفاء النافذة
+function closeModal(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+// بدء اللعبة
+function startGame() {
+  currentQuestionIndex = 0;
+  currentRiddleIndex = 0;
+  coins = 0;
+  mistakesInRow = 0;
+  showedMistakeMessage = false;
+  inRiddleMode = false;
+  updateCoinsText();
+  updateTitle();
+  showQuestion();
+  showModal('game');
+}
+
+// فتح الإعدادات
+function openSettings() {
+  showModal('settings');
+  document.getElementById('langSwitch').checked = (currentLang === 'en');
+}
+
+// إغلاق الإعدادات
+function closeSettings() {
+  closeModal('settings');
+}
+
+// تبديل اللغة
+function toggleLanguage() {
+  currentLang = document.getElementById('langSwitch').checked ? 'en' : 'ar';
+  updateTitle();
+  updateCoinsText();
+  if (document.getElementById('game').style.display === 'block') {
+    showQuestion();
+  }
+}
+
+// تغيير الخلفية حسب صورة المستخدم
+function changeBackground(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.body.style.backgroundImage = `url(${e.target.result})`;
+    document.body.style.backgroundSize = 'cover';
+  }
+  reader.readAsDataURL(file);
+}
+
+// فتح المتجر
+function openStore() {
+  showModal('store');
+}
+
+// إغلاق المتجر
+function closeStore() {
+  closeModal('store');
+}
+
+// التبرع (فتح رابط PayPal)
+function donate() {
+  const url = 'https://www.paypal.com/paypalme/sysym2011';
+  window.open(url, '_blank');
+}
+
+// الخروج
+function exitGame() {
+  alert(currentLang === 'ar' ? 'شكراً للعب! إلى اللقاء.' : 'Thanks for playing! Goodbye.');
+  window.close();
+}
+
+// عرض سؤال أو لغز
+function showQuestion() {
+  answerInput.value = '';
+  mistakesInRow = 0;
+  showedMistakeMessage = false;
+  if (inRiddleMode) {
+    const riddle = riddles[currentRiddleIndex];
+    questionText.textContent = currentLang === 'ar' ? riddle.ar : riddle.en;
+  } else {
+    const question = questions[currentQuestionIndex];
+    questionText.textContent = currentLang === 'ar' ? question.ar : question.en;
+  }
+  updateCoinsText();
+}
+
+// تحقق من الإجابة
+function submitAnswer() {
+  const userAnswer = answerInput.value.trim();
+  if (!userAnswer) return alert(currentLang === 'ar' ? 'الرجاء كتابة إجابة.' : 'Please enter an answer.');
+  
+  let correctAnswer = inRiddleMode ? riddles[currentRiddleIndex].answer : questions[currentQuestionIndex].answer;
+  if (userAnswer === correctAnswer) {
+    coins += 30;
+    mistakesInRow = 0;
+    showedMistakeMessage = false;
+    updateCoinsText();
+    alert(currentLang === 'ar' ? 'إجابة صحيحة! +30 عملة' : 'Correct answer! +30 coins');
+    // الانتقال للسؤال أو اللغز التالي
+    if (inRiddleMode) {
+      currentRiddleIndex++;
+      if (currentRiddleIndex >= riddles.length) {
+        alert(currentLang === 'ar' ? 'لقد انتهيت من كل الألغاز!' : 'You finished all riddles!');
+        closeModal('game');
+        return;
+      }
+    } else {
+      currentQuestionIndex++;
+      if (currentQuestionIndex >= questions.length) {
+        alert(currentLang === 'ar' ? 'لقد انتهيت من كل الأسئلة!' : 'You finished all questions!');
+        inRiddleMode = true;
+        currentRiddleIndex = 0;
+        alert(currentLang === 'ar' ? 'الآن الألغاز تبدأ!' : 'Now the riddles start!');
+      }
+    }
+    showQuestion();
+  } else {
+    mistakesInRow++;
+    if (mistakesInRow >= 5 && !showedMistakeMessage) {
+      alert(currentLang === 'ar' ? 'حتى الحمار لا يخطئ هكذا' : "Even a donkey doesn't make this many mistakes");
+      showedMistakeMessage = true;
+    } else {
+      alert(currentLang === 'ar' ? 'إجابة خاطئة. حاول مرة أخرى.' : 'Wrong answer. Try again.');
+    }
+  }
+}
+
+// تخطي السؤال بشرط دفع 200 عملة
+function skipQuestion() {
+  if (coins < 200) {
+    alert(currentLang === 'ar' ? 'لا يوجد لديك عملات كافية للتخطي.' : 'Not enough coins to skip.');
+    return;
+  }
+  if (confirm(currentLang === 'ar' ? 'هل تريد دفع 200 عملة لتخطي السؤال؟' : 'Pay 200 coins to skip question?')) {
+    coins -= 200;
+    updateCoinsText();
+    mistakesInRow = 0;
+    showedMistakeMessage = false;
+    if (inRiddleMode) {
+      currentRiddleIndex++;
+      if (currentRiddleIndex >= riddles.length) {
+        alert(currentLang === 'ar' ? 'لقد انتهيت من كل الألغاز!' : 'You finished all riddles!');
+        closeModal('game');
+        return;
+      }
+    } else {
+      currentQuestionIndex++;
+      if (currentQuestionIndex >= questions.length) {
+        alert(currentLang === 'ar' ? 'لقد انتهيت من كل الأسئلة!' : 'You finished all questions!');
+        inRiddleMode = true;
+        currentRiddleIndex = 0;
+        alert(currentLang === 'ar' ? 'الآن الألغاز تبدأ!' : 'Now the riddles start!');
+      }
+    }
+    showQuestion();
+  }
+}
+
+// شراء 200 عملة (ادفع 3 دولار)
+function buyCoins() {
+  if (confirm(currentLang === 'ar' ? 'هل تريد شراء 200 عملة مقابل 3 دولار عبر PayPal؟' : 'Buy 200 coins for 3 USD via PayPal?')) {
+    alert(currentLang === 'ar' ? 'تم شراء العملات! (وذلك تجريبي فقط)' : 'Coins purchased! (Demo only)');
+    coins += 200;
+    updateCoinsText();
+    closeStore();
+  }
+}
+
+// شراء مانع الإعلانات (10 دولار)
+function buyAdBlock() {
+  if (adBlockPurchased) {
+    alert(currentLang === 'ar' ? 'لقد اشتريت مانع الإعلانات بالفعل.' : 'Ad blocker already purchased.');
+    return;
+  }
+  if (confirm(currentLang === 'ar' ? 'هل تريد شراء مانع الإعلانات مقابل 10 دولار عبر PayPal؟' : 'Buy ad blocker for 5 USD via PayPal?')) {
+    alert(currentLang === 'ar' ? 'تم شراء مانع الإعلانات! (تجريبي)' : 'Ad blocker purchased! (Demo)');
+    adBlockPurchased = true;
+    closeStore();
+    // هنا يمكن إضافة كود لإخفاء الإعلانات
+  }
+}
+
+</script>
+
+</body>
+</html>
